@@ -59,6 +59,7 @@ claude-code-tracker/
 │   ├── config.py
 │   ├── database.py
 │   ├── models.py
+│   ├── costing.py
 │   └── routers/
 │       ├── auth.py
 │       ├── projects.py
@@ -68,11 +69,11 @@ claude-code-tracker/
 └── README.md
 ```
 
-> **Note:** This repository is built lesson-by-lesson in CCM. Some packages appear as the corresponding lessons ship. Follow the Masterclass modules for the complete walkthrough.
+The `app/` package is present. Run the quick start below, then `pytest -q`.
 
 ---
 
-## Quick start (when the full `app/` package is present)
+## Quick start
 
 ```bash
 # 1. Clone
@@ -143,7 +144,7 @@ Exact paths and payloads are defined in OpenAPI at `/docs` once the app is runni
 | Teaching purpose | Active — CCM curriculum project |
 | FastAPI entry (`main.py`) | In repo |
 | Auth helpers + pytest fixtures | In repo |
-| Full `app/` package | Ships with CCM lessons |
+| Full `app/` package | Present (auth, projects, sessions, analytics) |
 | Production hosting | Out of scope for v1 (local learning tool) |
 
 ---
