@@ -21,7 +21,7 @@ This is **not** a replacement for Anthropic’s billing UI. It is a **course pro
 
 ## How it Works
 
-Claude Code Session Tracker is a small API (+ docs UI) for:
+Claude Code Session Tracker is a small API and browser dashboard for:
 
 - **Auth** — register / login with JWT access + refresh tokens  
 - **Projects** — group related Claude Code work  
@@ -32,6 +32,7 @@ Interactive API docs ship with the app:
 
 | URL | Purpose |
 |-----|---------|
+| `/` | Tracker dashboard |
 | `/docs` | Swagger UI |
 | `/redoc` | ReDoc |
 | `/health` | Health check |
@@ -65,6 +66,7 @@ claude-code-tracker/
 │       ├── projects.py
 │       ├── sessions.py
 │       └── analytics.py
+├── frontend/               # Vanilla HTML, CSS, and JavaScript dashboard
 ├── requirements.txt
 └── README.md
 ```
@@ -94,7 +96,19 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for the dashboard or
+[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) for the API.
+
+### Dashboard flow
+
+1. Create an account or sign in.
+2. Create a project to group related Claude Code work.
+3. Log a session with its model and input/output token counts.
+4. Review the live session, token, and estimated-cost summary.
+
+The dashboard stores the access token in browser `localStorage`. Its usage data
+comes from the authenticated API; the cost is the teaching estimate defined in
+`app/costing.py`, not an Anthropic billing total.
 
 ### Smoke test
 

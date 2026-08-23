@@ -7,7 +7,20 @@ def test_health(client):
 def test_root(client):
     r = client.get("/")
     assert r.status_code == 200
-    assert r.json()["status"] == "running"
+    assert r.headers["content-type"].startswith("text/html")
+    assert "Claude Code Tracker" in r.text
+    assert 'id="auth-view"' in r.text
+    assert 'id="dashboard-view"' in r.text
+
+
+def test_frontend_static_assets_resolve(client):
+    stylesheet = client.get("/static/styles.css")
+    script = client.get("/static/app.js")
+
+    assert stylesheet.status_code == 200
+    assert stylesheet.headers["content-type"].startswith("text/css")
+    assert script.status_code == 200
+    assert "javascript" in script.headers["content-type"]
 
 
 def test_register_login_me(client, auth_headers):

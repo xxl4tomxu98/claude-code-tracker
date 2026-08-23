@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Track Claude Code projects, sessions, token usage, and estimated cost.">
+  <title>Claude Code Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script>
+    (function () {
+      var saved = localStorage.getItem("claude_tracker_theme");
+      var theme = saved || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle color theme">
+    <span class="theme-toggle-icon" aria-hidden="true">&#9728;</span>
+  </button>
+  <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+  <main id="auth-view" class="auth-shell">
+    <section class="auth-story" aria-labelledby="auth-heading">
+      <a class="brand brand-large" href="/" aria-label="Claude Code Tracker home">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span>Claude Code <strong>Tracker</strong></span>
+      </a>
+      <div class="story-copy">
+        <p class="eyebrow">A production-shaped teaching app</p>
+        <h1 id="auth-heading">See where every<br><span>token goes.</span></h1>
+        <p class="story-lede">Turn Claude Code activity into a clear trail from project to session to estimated cost.</p>
+        <ol class="flow-list" aria-label="How usage flows through the app">
+          <li><span>01</span><div><strong>Create a project</strong><small>Group related Claude Code work</small></div></li>
+          <li><span>02</span><div><strong>Log a session</strong><small>Record model and token usage</small></div></li>
+          <li><span>03</span><div><strong>Read the cost</strong><small>Understand the feedback loop</small></div></li>
+        </ol>
+      </div>
+      <p class="course-note"><span></span> Built for Claude Code Masterclass</p>
+    </section>
+
+    <section class="auth-panel">
+      <div class="auth-card">
+        <div class="auth-tabs" role="tablist" aria-label="Account access">
+          <button class="auth-tab active" type="button" role="tab" aria-selected="true" data-auth-tab="login">Sign in</button>
+          <button class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-tab="register">Create account</button>
+        </div>
+
+        <div id="login-panel" class="auth-form-panel" role="tabpanel">
+          <div class="form-heading">
+            <p class="eyebrow">Welcome back</p>
+            <h2>Continue your session</h2>
+            <p>Your dashboard uses real data from the FastAPI backend.</p>
+          </div>
+          <form id="login-form" class="stack-form">
+            <label>Username<input name="username" autocomplete="username" required placeholder="e.g. ada"></label>
+            <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="6" placeholder="Your password"></label>
+            <p class="form-error" data-form-error hidden></p>
+            <button class="button button-primary button-full" type="submit"><span>Open dashboard</span><span aria-hidden="true">→</span></button>
+          </form>
+          <p class="auth-switch">New to the tracker? <button type="button" data-switch-auth="register">Create an account</button></p>
+        </div>
+
+        <div id="register-panel" class="auth-form-panel" role="tabpanel" hidden>
+          <div class="form-heading">
+            <p class="eyebrow">Start the lesson</p>
+            <h2>Create your workspace</h2>
+            <p>Register once, then add your first project and session.</p>
+          </div>
+          <form id="register-form" class="stack-form">
+            <label>Username<input name="username" autocomplete="username" required minlength="3" placeholder="e.g. ada"></label>
+            <label>Email<input name="email" type="email" autocomplete="email" required placeholder="ada@example.com"></label>
+            <label>Password<input name="password" type="password" autocomplete="new-password" required minlength="6" placeholder="At least 6 characters"></label>
+            <p class="form-error" data-form-error hidden></p>
+            <button class="button button-primary button-full" type="submit"><span>Create account</span><span aria-hidden="true">→</span></button>
+          </form>
+          <p class="auth-switch">Already registered? <button type="button" data-switch-auth="login">Sign in</button></p>
+        </div>
+      </div>
+      <a class="docs-corner" href="/docs">Explore the API <span>↗</span></a>
+    </section>
+  </main>
+
+  <div id="dashboard-view" class="app-shell" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Claude Code Tracker home">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span>Claude Code <strong>Tracker</strong></span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a class="nav-link active" href="#overview"><span class="nav-icon">⌁</span>Overview</a>
+        <a class="nav-link" href="#projects"><span class="nav-icon">◇</span>Projects</a>
+        <a class="nav-link" href="#sessions"><span class="nav-icon">↗</span>Sessions</a>
+        <a class="nav-link" href="#agents"><span class="nav-icon">⌘</span>Subagents</a>
+      </nav>
+      <div class="sidebar-lesson">
+        <span class="lesson-label">TEACHING LOOP</span>
+        <div class="mini-flow"><span>Projects</span><i>→</i><span>Sessions</span><i>→</i><span>Cost</span></div>
+      </div>
+      <div class="sidebar-bottom">
+        <a class="nav-link" href="/docs"><span class="nav-icon">&lt;/&gt;</span>API docs<span class="external">↗</span></a>
+        <button id="logout-button" class="nav-link logout-button" type="button"><span class="nav-icon">↪</span>Sign out</button>
+      </div>
+    </aside>
+
+    <main class="dashboard">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Session intelligence</p>
+          <h1>Usage overview</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="api-status"><i></i> API connected</span>
+          <button class="button button-secondary" type="button" data-open-modal="session-modal">+ Log session</button>
+          <button class="button button-primary" type="button" data-open-modal="project-modal">+ New project</button>
+          <div class="user-avatar" id="user-avatar" aria-hidden="true">U</div>
+        </div>
+      </header>
+
+      <div id="dashboard-loading" class="loading-state">
+        <span class="spinner"></span><p>Loading your workspace…</p>
+      </div>
+
+      <div id="dashboard-content" class="dashboard-content" hidden>
+        <section id="overview" class="metric-grid" aria-label="Usage summary">
+          <article class="metric-card">
+            <div class="metric-head"><span class="metric-icon">◇</span><span class="metric-context">Workspace</span></div>
+            <strong id="metric-projects">0</strong><p>Total projects</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-head"><span class="metric-icon">↗</span><span class="metric-context">All time</span></div>
+            <strong id="metric-sessions">0</strong><p>Claude sessions</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-head"><span class="metric-icon">T</span><span class="metric-context">Input + output</span></div>
+            <strong id="metric-tokens">0</strong><p>Total tokens</p>
+          </article>
+          <article class="metric-card accent-card">
+            <div class="metric-head"><span class="metric-icon">$</span><span class="metric-context">Estimated</span></div>
+            <strong id="metric-cost">$0.00</strong><p>Usage cost</p>
+          </article>
+        </section>
+
+        <section id="sessions" class="panel sessions-panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">Latest activity</p><h2>Recent sessions</h2></div>
+            <button class="text-button" type="button" data-open-modal="session-modal">Log a session <span>→</span></button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Project</th><th>Model</th><th>Input tokens</th><th>Output tokens</th><th>Est. cost</th></tr></thead>
+              <tbody id="sessions-body"></tbody>
+            </table>
+            <div id="sessions-empty" class="empty-state" hidden>
+              <span class="empty-icon">↗</span><h3>No sessions logged yet</h3>
+              <p>Create a project, then record the input and output tokens from your first Claude Code run.</p>
+              <button class="button button-secondary" type="button" data-open-modal="session-modal">Log first session</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="dashboard-columns">
+          <section id="projects" class="panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Workspaces</p><h2>Your projects</h2></div>
+              <button class="icon-button" type="button" data-open-modal="project-modal" aria-label="Create project">+</button>
+            </div>
+            <div id="projects-list" class="project-list"></div>
+            <div id="projects-empty" class="empty-state compact" hidden>
+              <span class="empty-icon">◇</span><h3>Create your first project</h3>
+              <p>Projects organize related sessions into one cost trail.</p>
+              <button class="button button-secondary" type="button" data-open-modal="project-modal">New project</button>
+            </div>
+          </section>
+
+          <section id="agents" class="panel agent-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Claude Code specialists</p><h2>Teaching subagents</h2></div>
+              <span class="read-only-pill">READ ONLY</span>
+            </div>
+            <div class="agent-list">
+              <article class="agent-card">
+                <div class="agent-monogram">US</div>
+                <div><div class="agent-title"><h3>usage-scout</h3><span>haiku</span></div><p>Maps the session, token, analytics, and cost code without changing it.</p><code>.claude/agents/usage-scout.md</code></div>
+              </article>
+              <article class="agent-card">
+                <div class="agent-monogram guard">AG</div>
+                <div><div class="agent-title"><h3>auth-guard</h3><span>sonnet</span></div><p>Reviews JWT, password hashing, and auth routes while keeping edits out of scope.</p><code>.claude/agents/auth-guard.md</code></div>
+              </article>
+            </div>
+            <p class="agent-note"><span>i</span> These agents inspect the same backend powering this dashboard. Their read-only tools make the boundary explicit.</p>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="project-modal" class="modal">
+    <form id="project-form" class="modal-card">
+      <div class="modal-heading"><div><p class="eyebrow">New workspace</p><h2>Create project</h2></div><button class="close-button" type="button" data-close-modal aria-label="Close">×</button></div>
+      <p class="modal-copy">Group related Claude Code sessions so their usage tells one coherent story.</p>
+      <label>Project name<input name="name" required maxlength="120" placeholder="e.g. Documentation agent"></label>
+      <label>Description<textarea name="description" maxlength="500" rows="3" placeholder="What are you building or learning?"></textarea></label>
+      <p class="form-error" data-form-error hidden></p>
+      <div class="modal-actions"><button class="button button-ghost" type="button" data-close-modal>Cancel</button><button class="button button-primary" type="submit">Create project</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="session-modal" class="modal">
+    <form id="session-form" class="modal-card">
+      <div class="modal-heading"><div><p class="eyebrow">Record usage</p><h2>Log a session</h2></div><button class="close-button" type="button" data-close-modal aria-label="Close">×</button></div>
+      <p class="modal-copy">Connect a model run to a project. Cost is calculated by the FastAPI backend.</p>
+      <label>Project<select name="project_id" id="session-project" required><option value="">Choose a project</option></select></label>
+      <label>Claude model<select name="model" required><option value="claude-sonnet">Claude Sonnet</option><option value="claude-haiku">Claude Haiku</option><option value="claude-opus">Claude Opus</option><option value="claude-sonnet-4">Claude Sonnet 4</option></select></label>
+      <div class="field-row">
+        <label>Input tokens<input name="input_tokens" type="number" required min="0" value="0"></label>
+        <label>Output tokens<input name="output_tokens" type="number" required min="0" value="0"></label>
+      </div>
+      <p class="form-error" data-form-error hidden></p>
+      <div class="modal-actions"><button class="button button-ghost" type="button" data-close-modal>Cancel</button><button class="button button-primary" type="submit">Save session</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
