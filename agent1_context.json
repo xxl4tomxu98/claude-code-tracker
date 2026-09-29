@@ -1,0 +1,112 @@
+{
+  "project_name": "Claude Code Session Tracker",
+  "tech_stack": [
+    "FastAPI",
+    "SQLAlchemy",
+    "SQLite",
+    "Pydantic",
+    "python-jose (JWT)",
+    "passlib (bcrypt)",
+    "pytest",
+    "uvicorn"
+  ],
+  "file_inventory": [
+    {
+      "file": "main.py",
+      "purpose": "Application entry point; creates the FastAPI app, wires middleware, routers, static files, and startup DB init",
+      "key_functions": ["startup", "root", "health"],
+      "dependencies": ["fastapi", "app.database.init_db", "app.routers (auth, projects, sessions, analytics)"]
+    },
+    {
+      "file": "auth.py",
+      "purpose": "Authentication helpers: password hashing, JWT creation/decoding, current-user dependency",
+      "key_functions": [
+        "hash_password",
+        "verify_password",
+        "create_access_token",
+        "create_refresh_token",
+        "get_current_user",
+        "get_current_active_user"
+      ],
+      "dependencies": ["jose", "passlib.context.CryptContext", "fastapi", "sqlalchemy.orm.Session", "app.config.settings", "app.database.get_db", "app.models"]
+    },
+    {
+      "file": "app/__init__.py",
+      "purpose": "Package marker for the app module",
+      "key_functions": [],
+      "dependencies": []
+    },
+    {
+      "file": "app/config.py",
+      "purpose": "Application settings (secret key, JWT algorithm, token expiry, database URL) sourced from environment variables with defaults",
+      "key_functions": [],
+      "dependencies": ["os"]
+    },
+    {
+      "file": "app/costing.py",
+      "purpose": "Teaching cost table and formula for estimating cost in USD from model name and token counts",
+      "key_functions": ["estimate_cost_usd"],
+      "dependencies": []
+    },
+    {
+      "file": "app/database.py",
+      "purpose": "SQLAlchemy engine/session setup and DB session dependency and initialization",
+      "key_functions": ["get_db", "init_db"],
+      "dependencies": ["sqlalchemy", "app.config.settings"]
+    },
+    {
+      "file": "app/models.py",
+      "purpose": "SQLAlchemy ORM models for users, projects, and session logs",
+      "key_functions": [],
+      "dependencies": ["sqlalchemy", "app.database.Base"]
+    },
+    {
+      "file": "app/routers/__init__.py",
+      "purpose": "Aggregates and re-exports router modules",
+      "key_functions": [],
+      "dependencies": ["app.routers.analytics", "app.routers.auth", "app.routers.projects", "app.routers.sessions"]
+    },
+    {
+      "file": "app/routers/analytics.py",
+      "purpose": "Analytics endpoint returning per-model and total session/token/cost summaries for the current user",
+      "key_functions": ["summary"],
+      "dependencies": ["fastapi", "sqlalchemy.func", "app.models", "app.database.get_db", "auth.get_current_user"]
+    },
+    {
+      "file": "app/routers/auth.py",
+      "purpose": "Auth routes: user registration, login (issuing access/refresh tokens), and current-user lookup",
+      "key_functions": ["register", "login", "me"],
+      "dependencies": ["fastapi", "pydantic", "app.models", "app.database.get_db", "auth (create_access_token, create_refresh_token, get_current_user, hash_password, verify_password)"]
+    },
+    {
+      "file": "app/routers/projects.py",
+      "purpose": "CRUD-style routes for creating, listing, and retrieving projects owned by the current user",
+      "key_functions": ["create_project", "list_projects", "get_project"],
+      "dependencies": ["fastapi", "pydantic", "app.models", "app.database.get_db", "auth.get_current_user"]
+    },
+    {
+      "file": "app/routers/sessions.py",
+      "purpose": "Routes for creating and listing Claude Code session logs tied to a project, computing cost via app.costing",
+      "key_functions": ["create_session", "list_sessions"],
+      "dependencies": ["fastapi", "pydantic", "app.models", "app.costing.estimate_cost_usd", "app.database.get_db", "auth.get_current_user"]
+    }
+  ],
+  "authentication_system": "JWT-based auth using python-jose for token encode/decode and passlib/bcrypt for password hashing. Access tokens (60 min expiry) and refresh tokens (7 day expiry, with a jti claim) are issued on login via /auth/login. get_current_user in auth.py decodes the access token, validates its type and subject, and loads the active user from the database as a FastAPI dependency used across protected routes.",
+  "database_layer": "SQLAlchemy ORM over SQLite (configurable via TRACKER_DATABASE_URL). Models: User, Project, SessionLog, defined in app/models.py with relationships between them. app/database.py provides the engine, session factory, a get_db dependency generator, and init_db() to create tables on startup.",
+  "api_endpoints": [
+    "POST /auth/register",
+    "POST /auth/login",
+    "GET /auth/me",
+    "POST /projects",
+    "GET /projects",
+    "GET /projects/{project_id}",
+    "POST /sessions",
+    "GET /sessions",
+    "GET /analytics/summary",
+    "GET /health",
+    "GET /"
+  ],
+  "external_integrations": [
+    "None (no external API calls or third-party service integrations found in app/); static frontend files served locally via StaticFiles"
+  ]
+}

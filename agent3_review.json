@@ -1,0 +1,35 @@
+{
+  "total_findings_reviewed": 12,
+  "severity_adjustments": [
+    {
+      "id": 1,
+      "current_severity": "high",
+      "assessment": "appropriate, but description understates the real mechanism",
+      "note": "Starlette's CORSMiddleware does not send a literal '*' when allow_credentials=True together with allow_origins=['*'] — it reflects the request's actual Origin header back as Access-Control-Allow-Origin. That means this is exploitable by any origin in a real, spec-compliant browser today, not merely a risk if 'a client/proxy enforces loosely.' The impact section's CSRF framing is also speculative, since the API currently uses Bearer tokens (Authorization header) rather than cookies, which browsers do not attach automatically cross-site. Severity 'high' still holds, but for a different and more concrete reason than stated."
+    },
+    {
+      "id": 6,
+      "current_severity": "medium",
+      "assessment": "debatable, reasonable as-is",
+      "note": "This is an incomplete/dead feature (no /auth/refresh route, unusable token) rather than an active vulnerability. Framing it under 'security' at medium alongside true auth-bypass bugs (findings 2, 3) slightly overstates urgency; it would sit more naturally as 'quality, medium' or 'security, low' until a refresh endpoint is actually implemented. Not an error, just a judgment call worth flagging."
+    },
+    {
+      "id": 9,
+      "current_severity": "low",
+      "assessment": "severity fine; line numbers off by one",
+      "note": "list_projects is defined at app/routers/projects.py:43 (not 42) and list_sessions at app/routers/sessions.py:60 (not 59). Cosmetic inaccuracy that would cost a reader a few seconds."
+    }
+  ],
+  "questionable_findings": [
+    "Finding 1's impact statement ('CSRF-style data theft') is conditional on a cookie-based auth flow that does not exist in the current code (auth is Bearer-token only via Authorization header). The finding hedges this correctly with 'if a future same-site cookie is introduced,' but a reader skimming just the impact line could mistake this for an exploitable-today CSRF bug rather than a latent misconfiguration.",
+    "Finding 6 mixes an incompleteness observation (no redeem endpoint) with a security claim (no revocation mechanism) under a single medium/security-leaning finding; the two are somewhat different classes of problem and could be split for clarity."
+  ],
+  "missing_categories": [
+    "Test coverage: only one test file (tests/test_tracker.py) exists in the repo. The report never checks whether any of the 12 identified bugs (malformed JWT 'sub', the registration race, the missing refresh flow) are covered by a regression test, which matters directly for CLAUDE.md's 'pytest -q must pass' gate.",
+    "Input validation on session data: SessionLog.model in app/routers/sessions.py accepts an arbitrary string; app/costing.py silently falls back to DEFAULT_RATE for any unrecognized model name with no warning, so cost figures can be silently wrong for typos. Minor, but it's a data-quality gap the report doesn't touch.",
+    "General exception/observability posture: the report catches one specific unhandled-exception path (finding 3) but doesn't assess whether debug/reload mode is expected to be on in the target deployment, which would determine how much of a real risk that 500's stack trace leak actually is.",
+    "Coverage skew: 7 of 12 findings are in auth.py / app/routers/auth.py. Files like app/database.py, app/models.py, and app/routers/analytics.py appear to have received little or no scrutiny beyond what's cited elsewhere; the report doesn't state this scope limitation explicitly."
+  ],
+  "overall_assessment": "All 12 findings were checked directly against the current source and each is factually accurate in substance — file, behavior, and root cause all match. This is a well-grounded report, not a hallucinated one. The main weaknesses are: (1) finding 1's rationale is technically imprecise about why the CORS config is exploitable, even though the severity conclusion is correct; (2) minor line-number drift in finding 9; (3) the report is heavily weighted toward the two auth files and doesn't flag that other files got comparatively little attention or that test coverage for these exact bugs is essentially absent.",
+  "confidence_in_report": "high"
+}

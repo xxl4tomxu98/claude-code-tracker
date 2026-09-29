@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "file": "main.py",
+    "line": 21,
+    "severity": "high",
+    "category": "security",
+    "title": "CORS allows any origin together with credentials",
+    "description": "CORSMiddleware is configured with allow_origins=[\"*\"] and allow_credentials=True. Browsers reject the wildcard-with-credentials combination per the fetch spec, but some clients/proxies do not enforce this, and the intent (any origin, with cookies/Authorization headers allowed) is itself unsafe for an authenticated API.",
+    "impact": "If enforced loosely by a client or a future same-site cookie is introduced, any website could make authenticated cross-origin requests on behalf of a logged-in user, enabling CSRF-style data theft against /projects, /sessions, /analytics."
+  },
+  {
+    "id": 2,
+    "file": "app/config.py",
+    "line": 5,
+    "severity": "high",
+    "category": "security",
+    "title": "Hardcoded fallback JWT secret key",
+    "description": "SECRET_KEY defaults to the literal string \"ccm-tracker-dev-secret-change-me\" whenever TRACKER_SECRET_KEY is not set in the environment. This default is committed to the repo and predictable.",
+    "impact": "If the app is ever run without TRACKER_SECRET_KEY set (e.g. a misconfigured deployment), anyone who has read this file can forge valid access and refresh tokens for any user id, fully bypassing authentication."
+  },
+  {
+    "id": 3,
+    "file": "auth.py",
+    "line": 60,
+    "severity": "medium",
+    "category": "logic",
+    "title": "Unhandled ValueError when JWT subject is not numeric",
+    "description": "get_current_user reads user_id = payload.get(\"sub\") inside a try/except JWTError block, but int(user_id) is called later, outside that try block, in the db.query(...) filter. If a token's \"sub\" claim is not an integer-parseable string, int() raises ValueError which is not caught anywhere.",
+    "impact": "A malformed or tampered token (or any future bug that puts a non-numeric subject into a token) causes an unhandled 500 Internal Server Error instead of a clean 401, and can leak a stack trace if the app is run with debug/reload output visible."
+  },
+  {
+    "id": 4,
+    "file": "app/routers/auth.py",
+    "line": 46,
+    "severity": "medium",
+    "category": "quality",
+    "title": "OAuth2PasswordBearer tokenUrl does not match the login endpoint's request format",
+    "description": "auth.py declares oauth2_scheme = OAuth2PasswordBearer(tokenUrl=\"/auth/login\"), which tells FastAPI's interactive docs to POST form-encoded username/password to that URL. The actual /auth/login route (app/routers/auth.py:46) expects a JSON body matching the LoginIn model, not form data.",
+    "impact": "The \"Authorize\" button in /docs (Swagger UI) will fail to log in, since it submits OAuth2 form data instead of JSON — breaking the exact 'hit /docs' verification workflow described in the project's CLAUDE.md."
+  },
+  {
+    "id": 5,
+    "file": "app/routers/auth.py",
+    "line": 31,
+    "severity": "medium",
+    "category": "logic",
+    "title": "TOCTOU race condition on username/email uniqueness checks",
+    "description": "register() checks for existing username and email with separate SELECT queries, then inserts a new row. Two concurrent requests with the same username/email can both pass the checks before either commits, since there is no transaction-level locking and the checks are not atomic with the insert.",
+    "impact": "Concurrent duplicate registrations can raise an unhandled IntegrityError from the unique constraint on commit, returning a 500 instead of the intended 400 'already registered' response."
+  },
+  {
+    "id": 6,
+    "file": "auth.py",
+    "line": 32,
+    "severity": "medium",
+    "category": "logic",
+    "title": "Refresh tokens are issued but never usable or revocable",
+    "description": "create_refresh_token() generates a refresh token with a jti claim and 7-day expiry, and /auth/login returns it to the client (app/routers/auth.py:52). However, there is no /auth/refresh route to redeem a refresh token for a new access token, and the jti is never persisted, so it can't be checked or revoked either.",
+    "impact": "The refresh-token feature is dead/incomplete: clients receive a token they cannot use, and if the intent is later completed naively (e.g. accept any unexpired refresh token), there is no revocation mechanism for compromised tokens."
+  },
+  {
+    "id": 7,
+    "file": "auth.py",
+    "line": 69,
+    "severity": "low",
+    "category": "quality",
+    "title": "get_current_active_user is dead code and its error path is unreachable",
+    "description": "get_current_user's own DB query already filters models.User.is_active == True (auth.py:61), so an inactive user is filtered out and get_current_user raises 'Invalid or expired token' (401) before get_current_active_user's explicit 'Inactive user' (400) check can ever run. No router actually depends on get_current_active_user anyway.",
+    "impact": "Dead code adds maintenance confusion, and inactive/deactivated users receive a misleading 401 'invalid token' error rather than a clear 400 'inactive user' message."
+  },
+  {
+    "id": 8,
+    "file": "app/routers/auth.py",
+    "line": 15,
+    "severity": "low",
+    "category": "security",
+    "title": "No password strength or minimum length validation on registration",
+    "description": "RegisterIn.password is typed as a plain str with no min_length, complexity, or max_length constraint, so empty or single-character passwords are accepted by /auth/register.",
+    "impact": "Weak passwords are permitted, making accounts easier to brute-force; combined with no login rate limiting (finding 11), this materially weakens account security."
+  },
+  {
+    "id": 9,
+    "file": "app/routers/projects.py",
+    "line": 42,
+    "severity": "low",
+    "category": "performance",
+    "title": "List endpoints have no pagination",
+    "description": "list_projects (app/routers/projects.py:42-52) and list_sessions (app/routers/sessions.py:59-68) return all matching rows for a user with no limit/offset or page size cap.",
+    "impact": "A user (or account) with a large number of projects or session logs will receive an unbounded response payload, increasing latency and memory use as data grows."
+  },
+  {
+    "id": 10,
+    "file": "auth.py",
+    "line": 13,
+    "severity": "low",
+    "category": "security",
+    "title": "bcrypt silently truncates passwords beyond 72 bytes",
+    "description": "pwd_context uses the bcrypt scheme directly with no pre-hashing step. bcrypt only considers the first 72 bytes of input, so passwords longer than that are truncated before hashing with no warning to the user.",
+    "impact": "Users who choose long passphrases believe their full password is protecting the account, but only the first 72 bytes actually matter, silently reducing effective password strength for those users."
+  },
+  {
+    "id": 11,
+    "file": "app/routers/auth.py",
+    "line": 46,
+    "severity": "medium",
+    "category": "security",
+    "title": "No rate limiting or lockout on login",
+    "description": "The /auth/login route has no throttling, attempt counting, or lockout logic; verify_password is called for every request with no delay or backoff.",
+    "impact": "The endpoint is vulnerable to online brute-force or credential-stuffing attacks against user passwords, especially combined with the lack of a minimum password length (finding 8)."
+  },
+  {
+    "id": 12,
+    "file": "main.py",
+    "line": 33,
+    "severity": "low",
+    "category": "quality",
+    "title": "Static frontend directory is mounted without an existence check",
+    "description": "app.mount(\"/static\", StaticFiles(directory=FRONTEND_DIR), ...) and the root() handler's FileResponse(FRONTEND_DIR / \"index.html\") both assume app/frontend exists with an index.html, with no check or fallback if the directory or file is missing.",
+    "impact": "If the frontend directory is absent or misnamed in a given checkout/deployment, the app fails at import/startup time (StaticFiles raises if the directory doesn't exist) or the root route returns a raw file-not-found error instead of a clear diagnostic."
+  }
+]
